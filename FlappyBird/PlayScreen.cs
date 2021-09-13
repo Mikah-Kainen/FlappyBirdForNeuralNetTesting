@@ -10,14 +10,14 @@ namespace FlappyBird
     public class PlayScreen : Screen
     {
 
-        public  Texture2D WhitePixel;
+        public Texture2D WhitePixel;
         public GraphicsDevice GraphicsDevice;
 
-        public PlayScreen(GraphicsDevice graphicsDevice)
+        public PlayScreen(GraphicsDevice graphicsDevice, double minTimeBetweenPoles, double maxTimeBetweenPoles)
             :base()
         {
             GraphicsDevice = graphicsDevice;
-            whitePixel = Color.White.CreatePixel(GraphicsDevice);
+            WhitePixel = Color.White.CreatePixel(GraphicsDevice);
         }
 
         public void Update(GameTime gameTime)
