@@ -7,7 +7,7 @@ using System.Text;
 
 namespace FlappyBird
 {
-    public class GameObject
+    public class GameObject : ILikeDogs
     {
         public Vector2 Pos { get; set; }
         public Vector2 Size { get; set; }

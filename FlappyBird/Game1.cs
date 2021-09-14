@@ -16,15 +16,16 @@ namespace FlappyBird
             graphics = new GraphicsDeviceManager(this);
             Content.RootDirectory = "Content";
             IsMouseVisible = true;
-
-            Initialize();
         }
 
         protected override void Initialize()
         {
             // TODO: Add your initialization logic here
 
-            CurrentScreen = new PlayScreen();
+            var x = graphics;
+            int width = GraphicsDevice.Viewport.Bounds.Width;
+            int height = GraphicsDevice.Viewport.Bounds.Height;
+            CurrentScreen = new PlayScreen(graphics.GraphicsDevice, new Vector2(width, height));
 
             base.Initialize();
         }

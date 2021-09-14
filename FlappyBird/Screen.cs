@@ -13,17 +13,18 @@ namespace FlappyBird
 
         public Screen()
         {
-
+            GameObjects = new List<GameObject>();
         }
 
-        public void Update(GameTime gameTime)
+        public virtual void Update(GameTime gameTime)
         {
-            foreach(GameObject Object in GameObjects)
+
+            foreach (GameObject Object in GameObjects)
             {
                 Object.Update(gameTime);
             }
         }
-        public void Draw(SpriteBatch spriteBatch)
+        public virtual void Draw(SpriteBatch spriteBatch)
         {
             foreach (GameObject Object in GameObjects)
             {
