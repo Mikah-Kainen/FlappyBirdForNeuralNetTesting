@@ -51,9 +51,10 @@ namespace FlappyBird
 
         protected override void Draw(GameTime gameTime)
         {
-            spriteBatch.Begin();
 
             GraphicsDevice.Clear(Color.CornflowerBlue);
+            spriteBatch.Begin();
+
 
             CurrentScreen.Draw(spriteBatch);
             // TODO: Add your drawing code here

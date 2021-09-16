@@ -19,6 +19,11 @@ namespace FlappyBird
             Tint = tint;
         }
 
+        public override void Update(GameTime gameTime)
+        {
+
+        }
+
         public override void Draw(SpriteBatch spriteBatch)
         {
             spriteBatch.Draw(Tex, HitBox, Tint);
