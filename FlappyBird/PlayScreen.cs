@@ -1,6 +1,8 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
+using NeuralNetwork;
+
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -10,6 +12,8 @@ namespace FlappyBird
 {
     public class PlayScreen : Screen
     {
+        ErrorFunction meanSquared = new ErrorFunction((double output, double desired) => (output - desired) * (output - desired), (double output, double desired) => -2 * (output - desired));
+        ActivationFunction tanh = new ActivationFunction(Math.Tanh, (double input) => 1 - Math.Tanh(input) * Math.Tanh(input));
 
         public Texture2D WhitePixel;
         public GraphicsDevice GraphicsDevice;
@@ -17,9 +21,9 @@ namespace FlappyBird
         public double LastElapsedTime;
         public Random Random;
         public Vector2 ScreenSize;
-        public Bird Flappy;
-        public double gameLength;
-
+        public Bird[] Flappies;
+        public int timeToNextPipe;
+        public NeuralNet[] Nets;
         public PlayScreen(GraphicsDevice graphicsDevice, Vector2 screenSize)
             :base()
         {
@@ -28,18 +32,39 @@ namespace FlappyBird
             Pipes = new List<Pipe>();
             LastElapsedTime = -3000;
             Random = new Random();
+            Flappies = new Bird[100];
+            Nets = new NeuralNet[Flappies.Length];
             ScreenSize = screenSize;
             Vector2 flappySize = new Vector2(40, 40);
-            Flappy = new Bird(Color.White.CreatePixel(graphicsDevice), Color.Green, screenSize / 2 - flappySize, Vector2.One, flappySize, Vector2.Zero);
-            GameObjects.Add(Flappy);
-            gameLength = 0;
+            int[] Layers = new int[]
+            {
+                2,3,2,1,
+            };
+            for (int i = 0; i < Flappies.Length; i ++)
+            {
+                Flappies[i] = new Bird(Color.White.CreatePixel(graphicsDevice), Color.Green, screenSize / 2 - flappySize, Vector2.One, flappySize, Vector2.Zero);
+                Flappies[i].Pos = new Vector2(ScreenSize.X / 2 - Flappies[i].Size.X, ScreenSize.Y / 2 - Flappies[i].Size.Y - i * 2);
+                GameObjects.Add(Flappies[i]);
+
+                Nets[i] = new NeuralNet(meanSquared, tanh, Layers);
+                Nets[i].Randomize(Random,);
+            }
+            timeToNextPipe = 4000;
         }
 
         public override void Update(GameTime gameTime)
         {
-            gameLength += 16;
-            if(gameTime.TotalGameTime.TotalMilliseconds - LastElapsedTime > 4000)
+            for(int i = 0; i < Flappies.Length; i ++)
             {
+                if(Flappies[i].IsVisible)
+                {
+                    Flappies[i].SurvivalTime += gameTime.ElapsedGameTime.TotalSeconds;
+                }
+            }
+
+            if(gameTime.TotalGameTime.TotalMilliseconds - LastElapsedTime > timeToNextPipe)
+            {
+                timeToNextPipe = Random.Next(1500, 6000);
                 LastElapsedTime = gameTime.TotalGameTime.TotalMilliseconds;
                 Pipe nextPipe = new Pipe(40, new Vector2(40, 150), ScreenSize, Random, GraphicsDevice);
                 Pipes.Add(nextPipe);
@@ -47,17 +72,21 @@ namespace FlappyBird
             }
             base.Update(gameTime);
 
-            bool shouldRestart = false;
-            foreach (Pipe pipe in Pipes)
+
+            for (int i = 0; i < Flappies.Length; i ++)
             {
-                if (Flappy.HitBox.Intersects(pipe.HitBox) || Flappy.HitBox.Intersects(pipe.OtherPart.HitBox))
+                bool shouldInvisible = false;
+                foreach (Pipe pipe in Pipes)
                 {
-                    shouldRestart = true;
+                    if (Flappies[i].HitBox.Intersects(pipe.HitBox) || Flappies[i].HitBox.Intersects(pipe.OtherPart.HitBox))
+                    {
+                        shouldInvisible = true;
+                    }
                 }
-            }
-            if(Flappy.Pos.Y + Flappy.HitBox.Height > ScreenSize.Y || shouldRestart)
-            {
-                RestartGame(gameTime);
+                if (Flappies[i].Pos.Y + Flappies[i].HitBox.Height > ScreenSize.Y || shouldInvisible)
+                {
+                    Flappies[i].IsVisible = false;
+                }
             }
         }
 
@@ -69,11 +98,16 @@ namespace FlappyBird
         public void RestartGame(GameTime gameTime)
         {
             Pipes.Clear();
-            LastElapsedTime = gameTime.ElapsedGameTime.TotalMilliseconds - 3000;
-            Flappy.Pos = ScreenSize / 2 - Flappy.Size;
+            LastElapsedTime = gameTime.ElapsedGameTime.TotalMilliseconds - 3000; 
             GameObjects.Clear();
-            GameObjects.Add(Flappy);
-            gameLength = 0;
+            for (int i = 0; i < Flappies.Length; i ++)
+            {
+                Flappies[i].Pos = new Vector2(ScreenSize.X / 2 - Flappies[i].Size.X, ScreenSize.Y / 2 - Flappies[i].Size.Y - i * 2);
+                Flappies[i].IsVisible = true;
+                Flappies[i].SurvivalTime = 0;
+                GameObjects.Add(Flappies[i]);
+            }
+            timeToNextPipe = 4000;
         }
     }
 }

@@ -11,11 +11,13 @@ namespace FlappyBird
     {
 
         private bool wasMousePressed;
+        public double SurvivalTime { get; set; }
 
         public Bird(Texture2D tex, Color tint, Vector2 pos, Vector2 size, Vector2 scale, Vector2 origin)
             :base(tex, tint, pos, size, scale, origin)
         {
             wasMousePressed = false;
+            SurvivalTime = 0;
         }
 
         public override void Update(GameTime gameTime)

@@ -26,7 +26,10 @@ namespace FlappyBird
 
         public override void Draw(SpriteBatch spriteBatch)
         {
-            spriteBatch.Draw(Tex, HitBox, Tint);
+            if (IsVisible)
+            {
+                spriteBatch.Draw(Tex, HitBox, Tint);
+            }
         }
     }
 }
