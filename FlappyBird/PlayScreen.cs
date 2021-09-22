@@ -6,6 +6,7 @@ using NeuralNetwork;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Text;
 
 namespace FlappyBird
@@ -61,6 +62,7 @@ namespace FlappyBird
                 Pipes.RemoveAt(0);
             }
 
+            bool shouldTrain = true;
             for(int i = 0; i < Flappies.Length; i ++)
             {
                 if(Flappies[i].IsVisible)
@@ -72,7 +74,8 @@ namespace FlappyBird
                         inputs = new double[]
                         {
                         ClosestPipe.Pos.X + ClosestPipe.HitBox.Width - Flappies[i].Pos.X,
-                        ClosestPipe.Pos.Y + ClosestPipe.SpaceBetweenPipes.Y * 3 / 4 - Flappies[i].Pos.Y,
+                        Flappies[i].Pos.Y - ClosestPipe.Pos.Y - ClosestPipe.SpaceBetweenPipes.Y * 3 / 4,
+                        //check this later
                         };
 
                     }
@@ -85,7 +88,13 @@ namespace FlappyBird
                         };
                     }
                     Flappies[i].ShouldJump = Nets[i].Compute(inputs)[0];
+                    shouldTrain = false;
                 }
+            }
+            if(shouldTrain)
+            {
+                Train();
+                RestartGame(gameTime);
             }
 
             if(gameTime.TotalGameTime.TotalMilliseconds - LastElapsedTime > timeToNextPipe)
@@ -128,6 +137,29 @@ namespace FlappyBird
         public override void Draw(SpriteBatch spriteBatch)
         {
             base.Draw(spriteBatch);
+        }
+
+        public void Train()
+        {
+            List<Bird> newFlappies = new List<Bird>();
+            List<NeuralNet> newNets = new List<NeuralNet>();
+            /*(IEnumerable<Bird>, IEnumerable<NeuralNet>)*/
+            var result =
+                       Enumerable.Zip<Bird, NeuralNet, (Bird bird, NeuralNet net)>(Flappies, Nets, (b, n) => (b, n))
+                       .OrderBy(pair => pair.bird.SurvivalTime)
+                       .Select(pair =>
+             {
+                 newFlappies.Insert(0, pair.bird);
+                 newNets.Insert(0, pair.net);
+                 return pair;
+             }).ToList();
+
+            //var IWannaSeeThisList = Flappies;
+            //var IAlsoWannaSeeThisOne = Nets;
+            Flappies = newFlappies.ToArray();
+            Nets = newNets.ToArray();
+
+
         }
 
         public void RestartGame(GameTime gameTime)
