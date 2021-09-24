@@ -55,7 +55,8 @@ namespace FlappyBird
             GraphicsDevice.Clear(Color.CornflowerBlue);
             spriteBatch.Begin();
 
-
+            Window.Title = "Hello, Mikah!";
+            
             CurrentScreen.Draw(spriteBatch);
             // TODO: Add your drawing code here
 

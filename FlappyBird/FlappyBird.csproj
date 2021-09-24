@@ -21,6 +21,6 @@
     <MonoGameContentReference Include="Content\Content.mgcb" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\..\NeuralNetwork\NeuralNetwork\NeuralNetwork.csproj" />
+    <ProjectReference Include="..\..\NeuralNetwork\NeuralNetwork\NeuralNetwork.csproj" />
   </ItemGroup>
 </Project>

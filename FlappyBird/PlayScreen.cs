@@ -45,7 +45,7 @@ namespace FlappyBird
             for (int i = 0; i < Flappies.Length; i ++)
             {
                 Flappies[i] = new Bird(Color.White.CreatePixel(graphicsDevice), Color.Green, screenSize / 2 - flappySize, Vector2.One, flappySize, Vector2.Zero);
-                Flappies[i].Pos = new Vector2(ScreenSize.X / 5 - Flappies[i].Size.X, ScreenSize.Y / 2 - Flappies[i].Size.Y - i * 2);
+                Flappies[i].Pos = new Vector2(ScreenSize.X / 5 - Flappies[i].Size.X, ScreenSize.Y / 2 - Flappies[i].Size.Y);
                 GameObjects.Add(Flappies[i]);
 
                 Nets[i] = new NeuralNet(meanSquared, tanh, Layers);
@@ -57,6 +57,9 @@ namespace FlappyBird
 
         public override void Update(GameTime gameTime)
         {
+
+            
+
             if(Pipes.Count > 0 && Pipes[0].Pos.X + Pipes[0].HitBox.Width < 0)
             {
                 Pipes.RemoveAt(0);
@@ -159,6 +162,20 @@ namespace FlappyBird
             Flappies = newFlappies.ToArray();
             Nets = newNets.ToArray();
 
+            for(int i = Nets.Length * 1/10; i < Nets.Length * 9/10; i ++)
+            {
+                for(int x = 0; x < Nets[i].Layers.Length; x ++)
+                {
+                    NeuralNet parent = Nets[Random.Next(0, 10)];
+                    int length = Nets[i].Layers[x].Neurons.Length;
+                    int crossoverPoint = Random.Next(0, length);
+                    for(int z = 0; z < crossoverPoint; z ++)
+                    {
+                        Nets[i].Layers[x].Neurons[z] = parent.Layers[x].Neurons[z];
+                    }
+                }
+            }
+
 
         }
 
@@ -169,12 +186,13 @@ namespace FlappyBird
             GameObjects.Clear();
             for (int i = 0; i < Flappies.Length; i ++)
             {
-                Flappies[i].Pos = new Vector2(ScreenSize.X / 2 - Flappies[i].Size.X, ScreenSize.Y / 2 - Flappies[i].Size.Y - i * 2);
+                Flappies[i].Pos = new Vector2(ScreenSize.X / 5 - Flappies[i].Size.X, ScreenSize.Y / 2 - Flappies[i].Size.Y);
                 Flappies[i].IsVisible = true;
                 Flappies[i].SurvivalTime = 0;
                 GameObjects.Add(Flappies[i]);
             }
             timeToNextPipe = 4000;
+            ClosestPipe = null;
         }
     }
 }
