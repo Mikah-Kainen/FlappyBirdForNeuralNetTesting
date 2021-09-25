@@ -11,6 +11,8 @@ namespace FlappyBird
 
         public Screen CurrentScreen;
 
+        public static string Title;
+        
         public Game1()
         {
             graphics = new GraphicsDeviceManager(this);
@@ -42,6 +44,8 @@ namespace FlappyBird
             if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
                 Exit();
 
+            Window.Title = Title;
+
             CurrentScreen.Update(gameTime);
 
             // TODO: Add your update logic here
@@ -54,8 +58,6 @@ namespace FlappyBird
 
             GraphicsDevice.Clear(Color.CornflowerBlue);
             spriteBatch.Begin();
-
-            Window.Title = "Hello, Mikah!";
             
             CurrentScreen.Draw(spriteBatch);
             // TODO: Add your drawing code here
