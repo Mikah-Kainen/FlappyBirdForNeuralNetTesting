@@ -30,7 +30,8 @@ namespace FlappyBird
         public NeuralNet[] Nets;
         public Pipe ClosestPipe;
         public int CurrentGeneration;
-        
+
+        public double[] BestFlappy;
         public PlayScreen(GraphicsDevice graphicsDevice, Vector2 screenSize)
             :base()
         {
@@ -63,6 +64,19 @@ namespace FlappyBird
 
         public override void Update(GameTime gameTime)
         {
+            if(InputManager.KeyboardState.IsKeyDown(Microsoft.Xna.Framework.Input.Keys.Space))
+            {
+                BestFlappy = Nets[0].Serialize();   
+            }
+            if(InputManager.KeyboardState.IsKeyDown(Microsoft.Xna.Framework.Input.Keys.Enter))
+            {
+                Flappies[0].IsVisible = true;
+                for(int i = 1; i < Flappies.Length; i ++)
+                {
+                    Flappies[i].IsVisible = false;
+                }
+                Nets[0] = new NeuralNet(meanSquared, tanh, BestFlappy);
+            }
 
             if(Pipes.Count > 0 && Pipes[0].Pos.X + Pipes[0].HitBox.Width < 0)
             {
