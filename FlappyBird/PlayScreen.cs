@@ -8,6 +8,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using System.IO;
+using Newtonsoft.Json;
 
 namespace FlappyBird
 {
@@ -31,7 +33,9 @@ namespace FlappyBird
         public Pipe ClosestPipe;
         public int CurrentGeneration;
 
-        public double[] BestFlappy;
+        public bool WasSpacePressed;
+        public bool WasEnterPressed;
+
         public PlayScreen(GraphicsDevice graphicsDevice, Vector2 screenSize)
             :base()
         {
@@ -54,28 +58,61 @@ namespace FlappyBird
                 Flappies[i].Pos = new Vector2(ScreenSize.X / 5 - Flappies[i].Size.X, ScreenSize.Y / 2 - Flappies[i].Size.Y);
                 GameObjects.Add(Flappies[i]);
 
-                Nets[i] = new NeuralNet(meanSquared, tanh, Layers);
+                Nets[i] = new NeuralNet(ErrorFunctions.MeanSquared, ActivationFunctions.Tanh, Layers);
                 Nets[i].Randomize(Random, RandomizeMin, RandomizeMax);
             }
             timeToNextPipe = 4000;
             ClosestPipe = null;
             CurrentGeneration = 1;
+
+            WasSpacePressed = false;
+            WasEnterPressed = false;
         }
 
         public override void Update(GameTime gameTime)
         {
             if(InputManager.KeyboardState.IsKeyDown(Microsoft.Xna.Framework.Input.Keys.Space))
             {
-                BestFlappy = Nets[0].Serialize();   
+                WasSpacePressed = true;
+            }
+            if(InputManager.KeyboardState.IsKeyUp(Microsoft.Xna.Framework.Input.Keys.Space) && WasSpacePressed)
+            {
+                List<Bird> newFlappies = new List<Bird>();
+                List<NeuralNet> newNets = new List<NeuralNet>();
+                /*(IEnumerable<Bird>, IEnumerable<NeuralNet>)*/
+                var result =
+                           Enumerable.Zip<Bird, NeuralNet, (Bird bird, NeuralNet net)>(Flappies, Nets, (b, n) => (b, n))
+                           .OrderBy(pair => pair.bird.SurvivalTime)
+                           .Select(pair =>
+                           {
+                               newFlappies.Insert(0, pair.bird);
+                               newNets.Insert(0, pair.net);
+                               return pair;
+                           }).ToList();
+
+                Flappies = newFlappies.ToArray();
+                Nets = newNets.ToArray();
+
+                var json = JsonConvert.SerializeObject(Nets[0]);
+                System.IO.File.WriteAllText("NeuralNet.json", json);
+                WasSpacePressed = false;
             }
             if(InputManager.KeyboardState.IsKeyDown(Microsoft.Xna.Framework.Input.Keys.Enter))
             {
+                WasEnterPressed = true;
+            }
+            if(InputManager.KeyboardState.IsKeyUp(Microsoft.Xna.Framework.Input.Keys.Enter) && WasEnterPressed)
+            {
+                RestartGame(gameTime);
                 Flappies[0].IsVisible = true;
-                for(int i = 1; i < Flappies.Length; i ++)
+                string json = System.IO.File.ReadAllText("NeuralNet.json");
+                Nets[0] = JsonConvert.DeserializeObject<NeuralNet>(json);
+                for (int i = 1; i < Flappies.Length; i++)
                 {
                     Flappies[i].IsVisible = false;
                 }
-                Nets[0] = new NeuralNet(meanSquared, tanh, BestFlappy);
+
+                WasEnterPressed = false;
             }
 
             if(Pipes.Count > 0 && Pipes[0].Pos.X + Pipes[0].HitBox.Width < 0)
@@ -181,8 +218,6 @@ namespace FlappyBird
                  return pair;
              }).ToList();
 
-            //var IWannaSeeThisList = Flappies;
-            //var IAlsoWannaSeeThisOne = Nets;
             Flappies = newFlappies.ToArray();
             Nets = newNets.ToArray();
 
