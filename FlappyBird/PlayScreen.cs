@@ -18,9 +18,6 @@ namespace FlappyBird
         public const double RandomizeMin = -50;
         public const double RandomizeMax = 50;
 
-        ErrorFunction meanSquared = new ErrorFunction((double output, double desired) => (output - desired) * (output - desired), (double output, double desired) => -2 * (output - desired));
-        ActivationFunction tanh = new ActivationFunction(Math.Tanh, (double input) => 1 - Math.Tanh(input) * Math.Tanh(input));
-
         public Texture2D WhitePixel;
         public GraphicsDevice GraphicsDevice;
         public List<Pipe> Pipes;
@@ -107,6 +104,18 @@ namespace FlappyBird
                 Flappies[0].IsVisible = true;
                 string json = System.IO.File.ReadAllText("NeuralNet.json");
                 Nets[0] = JsonConvert.DeserializeObject<NeuralNet>(json);
+                for(int i = Nets[0].Layers.Length - 1; i > 0; i --)
+                {
+                    Nets[0].Layers[i].PreviousLayer = Nets[0].Layers[i - 1];
+                    Nets[0].Layers[i].Output = new double[Nets[0].Layers[i].Neurons.Length];
+                    for (int x = 0; x < Nets[0].Layers[i].Neurons.Length; x ++)
+                    {
+                        for (int z = 0; z < Nets[0].Layers[i].PreviousLayer.Neurons.Length; z++)
+                        {
+                            Nets[0].Layers[i].Neurons[x].Dentrites[z].Previous = Nets[0].Layers[i].PreviousLayer.Neurons[z];
+                        }
+                    }
+                }
                 for (int i = 1; i < Flappies.Length; i++)
                 {
                     Flappies[i].IsVisible = false;

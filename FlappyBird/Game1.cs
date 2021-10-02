@@ -2,6 +2,8 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 
+using System.Numerics;
+
 namespace FlappyBird
 {
     public class Game1 : Game
@@ -55,7 +57,6 @@ namespace FlappyBird
 
         protected override void Draw(GameTime gameTime)
         {
-
             GraphicsDevice.Clear(Color.CornflowerBlue);
             spriteBatch.Begin();
             
