@@ -66,6 +66,10 @@ namespace FlappyBird
             WasEnterPressed = false;
         }
 
+
+        NeuralNet savedNet;
+
+
         public override void Update(GameTime gameTime)
         {
             if (InputManager.KeyboardState.IsKeyDown(Microsoft.Xna.Framework.Input.Keys.Space))
@@ -90,6 +94,8 @@ namespace FlappyBird
                 Flappies = newFlappies.ToArray();
                 Nets = newNets.ToArray();
 
+                savedNet = Nets[0];
+
                 var json = JsonConvert.SerializeObject(Nets[0]);
                 System.IO.File.WriteAllText("NeuralNet.json", json);
                 WasSpacePressed = false;
@@ -101,48 +107,45 @@ namespace FlappyBird
             if (InputManager.KeyboardState.IsKeyUp(Microsoft.Xna.Framework.Input.Keys.Enter) && WasEnterPressed)
             {
                 RestartGame(gameTime);
-                for (int zero = 0; zero < Flappies.Length; zero ++)
+                Nets = new NeuralNet[1];
+                Nets[0] = savedNet;
+                Flappies[0].IsVisible = true;
+
+
+                string json = System.IO.File.ReadAllText("NeuralNet.json");
+                //Nets[0] = JsonConvert.DeserializeObject<NeuralNet>(json);
+                for (int i = Nets[0].Layers.Length - 1; i > 0; i--)
                 {
-                    Flappies[zero].IsVisible = true;
-                    string json = System.IO.File.ReadAllText("NeuralNet.json");
-                    Nets[zero] = JsonConvert.DeserializeObject<NeuralNet>(json);
-                    for (int i = Nets[zero].Layers.Length - 1; i > 0; i--)
+                    Nets[0].Layers[i].PreviousLayer = Nets[0].Layers[i - 1];
+                    Nets[0].Layers[i].Output = new double[Nets[0].Layers[i].Neurons.Length];
+                    for (int x = 0; x < Nets[0].Layers[i].Neurons.Length; x++)
                     {
-                        Nets[zero].Layers[i].PreviousLayer = Nets[zero].Layers[i - 1];
-                        Nets[zero].Layers[i].Output = new double[Nets[zero].Layers[i].Neurons.Length];
-                        for (int x = 0; x < Nets[zero].Layers[i].Neurons.Length; x++)
+                        for (int z = 0; z < Nets[0].Layers[i].PreviousLayer.Neurons.Length; z++)
                         {
-                            for (int z = 0; z < Nets[zero].Layers[i].PreviousLayer.Neurons.Length; z++)
-                            {
-                                Nets[zero].Layers[i].Neurons[x].Dentrites[z].Previous = Nets[zero].Layers[i].PreviousLayer.Neurons[z];
-                            }
+                            Nets[0].Layers[i].Neurons[x].Dentrites[z].Previous = Nets[0].Layers[i].PreviousLayer.Neurons[z];
                         }
                     }
-                    //for (int i = 1; i < Flappies.Length; i++)
-                    //{
-                    //    Flappies[i].IsVisible = false;
-                    //}
+                }
 
-                    double[] inputs;
-                    if (ClosestPipe != null)
+                double[] inputs;
+                if (ClosestPipe != null)
+                {
+                    inputs = new double[]
                     {
-                        inputs = new double[]
-                        {
-                        ClosestPipe.Pos.X + ClosestPipe.HitBox.Width - Flappies[zero].Pos.X,
-                        Flappies[zero].Pos.Y - ClosestPipe.Pos.Y - ClosestPipe.SpaceBetweenPipes.Y * 3 / 4,
-                        };
+                        ClosestPipe.Pos.X + ClosestPipe.HitBox.Width - Flappies[0].Pos.X,
+                        Flappies[0].Pos.Y - ClosestPipe.Pos.Y - ClosestPipe.SpaceBetweenPipes.Y * 3 / 4,
+                    };
 
-                    }
-                    else
+                }
+                else
+                {
+                    inputs = new double[]
                     {
-                        inputs = new double[]
-                        {
                             ScreenSize.X / 2,
                             ScreenSize.Y / 2,
-                        };
-                    }
-                    Flappies[zero].ShouldJump = Nets[zero].Compute(inputs)[0];
+                    };
                 }
+                Flappies[0].ShouldJump = Nets[0].Compute(inputs)[0];
                 WasEnterPressed = false;
                 CurrentGeneration--;
             }
@@ -155,7 +158,7 @@ namespace FlappyBird
             bool shouldTrain = true;
             int FlappyCount = 0;
             double TotalMilliseconds = 0;
-            for (int i = 0; i < Flappies.Length; i++)
+            for (int i = 0; i < Nets.Length; i++)
             {
                 if (Flappies[i].IsVisible)
                 {
@@ -183,6 +186,10 @@ namespace FlappyBird
                     Flappies[i].ShouldJump = Nets[i].Compute(inputs)[0];
                     shouldTrain = false;
                 }
+            }
+            for(int i = Nets.Length; i < Flappies.Length; i ++)
+            {
+                Flappies[i].IsVisible = false;
             }
             if (shouldTrain)
             {
