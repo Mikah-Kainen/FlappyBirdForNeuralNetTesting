@@ -269,7 +269,21 @@ namespace FlappyBird
                     int crossoverPoint = Random.Next(0, length);
                     for (int z = 0; z < crossoverPoint; z++)
                     {
-                        Nets[i].Layers[x].Neurons[z] = parent.Layers[x].Neurons[z];
+                        Layer previousLayer = null;
+                        if(x > 0)
+                        {
+                            previousLayer = Nets[i].Layers[x - 1];
+                        }
+                        Nets[i].Layers[x].Neurons[z] = new Neuron(parent.Layers[x].Neurons[z], Nets[i].Layers[x].Neurons[z].Dentrites, previousLayer);
+                    }
+                    for(int z = crossoverPoint; z < Nets[i].Layers[x].Neurons.Length; z ++)
+                    {
+                        Layer previousLayer = null;
+                        if (x > 0)
+                        {
+                            previousLayer = Nets[i].Layers[x - 1];
+                        }
+                        Nets[i].Layers[x].Neurons[z] = new Neuron(Nets[i].Layers[x].Neurons[z], Nets[i].Layers[x].Neurons[z].Dentrites, previousLayer);
                     }
 
                     int mutateIndex = Random.Next(0, Nets[i].Layers[x].Neurons.Length);
