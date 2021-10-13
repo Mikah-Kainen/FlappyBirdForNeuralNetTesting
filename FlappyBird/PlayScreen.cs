@@ -32,6 +32,10 @@ namespace FlappyBird
 
         public bool WasSpacePressed;
         public bool WasEnterPressed;
+        public bool WasSPressed;
+
+        public int SpeedFactor;
+        public double ExtraTime;
 
         public PlayScreen(GraphicsDevice graphicsDevice, Vector2 screenSize)
             : base()
@@ -64,6 +68,10 @@ namespace FlappyBird
 
             WasSpacePressed = false;
             WasEnterPressed = false;
+            WasSPressed = false;
+
+            SpeedFactor = 1;
+            ExtraTime = 0;
         }
 
 
@@ -76,7 +84,7 @@ namespace FlappyBird
             {
                 WasSpacePressed = true;
             }
-            if (InputManager.KeyboardState.IsKeyUp(Microsoft.Xna.Framework.Input.Keys.Space) && WasSpacePressed)
+            else if (WasSpacePressed)
             {
                 List<Bird> newFlappies = new List<Bird>();
                 List<NeuralNet> newNets = new List<NeuralNet>();
@@ -104,7 +112,7 @@ namespace FlappyBird
             {
                 WasEnterPressed = true;
             }
-            if (InputManager.KeyboardState.IsKeyUp(Microsoft.Xna.Framework.Input.Keys.Enter) && WasEnterPressed)
+            else if (WasEnterPressed)
             {
                 RestartGame(gameTime);
                 Nets = new NeuralNet[1];
@@ -150,96 +158,124 @@ namespace FlappyBird
                 CurrentGeneration--;
             }
 
-            if (Pipes.Count > 0 && Pipes[0].Pos.X + Pipes[0].HitBox.Width < 0)
+            for (int s = 0; s < SpeedFactor; s++)
             {
-                Pipes.RemoveAt(0);
-            }
-
-            bool shouldTrain = true;
-            int FlappyCount = 0;
-            double TotalMilliseconds = 0;
-            for (int i = 0; i < Nets.Length; i++)
-            {
-                if (Flappies[i].IsVisible)
+                if (InputManager.KeyboardState.IsKeyDown(Microsoft.Xna.Framework.Input.Keys.S))
                 {
-                    FlappyCount++;
-                    TotalMilliseconds = Flappies[i].SurvivalTime;
-                    Flappies[i].SurvivalTime += gameTime.ElapsedGameTime.TotalSeconds;
-                    double[] inputs;
-                    if (ClosestPipe != null)
+                    WasSPressed = true;
+                }
+                else if (WasSPressed)
+                {
+                    if (SpeedFactor == 1)
                     {
-                        inputs = new double[]
-                        {
-                        ClosestPipe.Pos.X + ClosestPipe.HitBox.Width - Flappies[i].Pos.X,
-                        Flappies[i].Pos.Y - ClosestPipe.Pos.Y - ClosestPipe.SpaceBetweenPipes.Y * 3 / 4,
-                        };
-
+                        SpeedFactor = 10;
                     }
                     else
                     {
-                        inputs = new double[]
+                        SpeedFactor = 1;
+                    }
+                    WasSPressed = false;
+                }
+
+                if(s > 1)
+                {
+                    ExtraTime += 16;
+                }
+                if (Pipes.Count > 0 && Pipes[0].Pos.X + Pipes[0].HitBox.Width < 0)
+                {
+                    Pipes.RemoveAt(0);
+                }
+
+                bool shouldTrain = true;
+                int FlappyCount = 0;
+                double TotalMilliseconds = 0;
+                for (int i = 0; i < Nets.Length; i++)
+                {
+                    if (Flappies[i].IsVisible)
+                    {
+                        FlappyCount++;
+                        TotalMilliseconds = Flappies[i].SurvivalTime;
+                        Flappies[i].SurvivalTime += gameTime.ElapsedGameTime.TotalSeconds;
+                        double[] inputs;
+                        if (ClosestPipe != null)
                         {
+                            inputs = new double[]
+                            {
+                        ClosestPipe.Pos.X + ClosestPipe.HitBox.Width - Flappies[i].Pos.X,
+                        Flappies[i].Pos.Y - ClosestPipe.Pos.Y - ClosestPipe.SpaceBetweenPipes.Y * 3 / 4,
+                            };
+
+                        }
+                        else
+                        {
+                            inputs = new double[]
+                            {
                             ScreenSize.X / 2,
                             ScreenSize.Y / 2,
-                        };
-                    }
-                    Flappies[i].ShouldJump = Nets[i].Compute(inputs)[0];
-                    shouldTrain = false;
-                }
-            }
-            for(int i = Nets.Length; i < Flappies.Length; i ++)
-            {
-                Flappies[i].IsVisible = false;
-            }
-            if (shouldTrain)
-            {
-                Train();
-                RestartGame(gameTime);
-            }
-
-            if (gameTime.TotalGameTime.TotalMilliseconds - LastElapsedTime > timeToNextPipe)
-            {
-                timeToNextPipe = Random.Next(1500, 4000);
-                LastElapsedTime = gameTime.TotalGameTime.TotalMilliseconds;
-                Pipe nextPipe = new Pipe(40, new Vector2(40, 150), ScreenSize, Random, GraphicsDevice);
-                Pipes.Add(nextPipe);
-                GameObjects.Add(nextPipe);
-            }
-
-
-            for (int i = 0; i < Flappies.Length; i++)
-            {
-                bool shouldInvisible = false;
-                for (int x = 0; x < Pipes.Count; x++)
-                {
-                    if (Flappies[i].HitBox.Intersects(Pipes[x].HitBox) || Flappies[i].HitBox.Intersects(Pipes[x].OtherPart.HitBox))
-                    {
-                        shouldInvisible = true;
-                    }
-
-                    if (ClosestPipe == null)
-                    {
-                        ClosestPipe = Pipes[0];
-                    }
-                    else if (ClosestPipe.Pos.X + ClosestPipe.HitBox.Width < Flappies[i].Pos.X)
-                    {
-                        ClosestPipe = Pipes[x + 1];
+                            };
+                        }
+                        Flappies[i].ShouldJump = Nets[i].Compute(inputs)[0];
+                        shouldTrain = false;
                     }
                 }
-                if (Flappies[i].Pos.Y + Flappies[i].HitBox.Height > ScreenSize.Y || shouldInvisible)
+                for (int i = Nets.Length; i < Flappies.Length; i++)
                 {
                     Flappies[i].IsVisible = false;
                 }
+                if (shouldTrain)
+                {
+                    Train();
+                    RestartGame(gameTime);
+                }
+
+                if (gameTime.TotalGameTime.TotalMilliseconds + ExtraTime - LastElapsedTime > timeToNextPipe)
+                {
+                    ExtraTime = 0;
+                    timeToNextPipe = Random.Next(1500, 4000);
+                    LastElapsedTime = gameTime.TotalGameTime.TotalMilliseconds;
+                    Pipe nextPipe = new Pipe(40, new Vector2(40, 150), ScreenSize, Random, GraphicsDevice);
+                    Pipes.Add(nextPipe);
+                    GameObjects.Add(nextPipe);
+                }
+
+
+                for (int i = 0; i < Flappies.Length; i++)
+                {
+                    bool shouldInvisible = false;
+                    for (int x = 0; x < Pipes.Count; x++)
+                    {
+                        if (Flappies[i].HitBox.Intersects(Pipes[x].HitBox) || Flappies[i].HitBox.Intersects(Pipes[x].OtherPart.HitBox))
+                        {
+                            shouldInvisible = true;
+                        }
+
+                        if (ClosestPipe == null)
+                        {
+                            ClosestPipe = Pipes[0];
+                        }
+                        else if (ClosestPipe.Pos.X + ClosestPipe.HitBox.Width < Flappies[i].Pos.X)
+                        {
+                            ClosestPipe = Pipes[x + 1];
+                        }
+                    }
+                    if (Flappies[i].Pos.Y + Flappies[i].HitBox.Height > ScreenSize.Y || shouldInvisible)
+                    {
+                        Flappies[i].IsVisible = false;
+                    }
+                }
+
+                Game1.Title = $"FlappyCount: {FlappyCount}, GameTime: {TotalMilliseconds:0.00}, CurrentGeneration: {CurrentGeneration}";
+
+                base.Update(gameTime);
             }
-
-            Game1.Title = $"FlappyCount: {FlappyCount}, GameTime: {TotalMilliseconds:0.00}, CurrentGeneration: {CurrentGeneration}";
-
-            base.Update(gameTime);
         }
 
         public override void Draw(SpriteBatch spriteBatch)
         {
-            base.Draw(spriteBatch);
+            if (SpeedFactor == 1 || true)
+            {
+                base.Draw(spriteBatch);
+            }
         }
 
         public void Train()
@@ -270,13 +306,13 @@ namespace FlappyBird
                     for (int z = 0; z < crossoverPoint; z++)
                     {
                         Layer previousLayer = null;
-                        if(x > 0)
+                        if (x > 0)
                         {
                             previousLayer = Nets[i].Layers[x - 1];
                         }
                         Nets[i].Layers[x].Neurons[z] = new Neuron(parent.Layers[x].Neurons[z], Nets[i].Layers[x].Neurons[z].Dentrites, previousLayer);
                     }
-                    for(int z = crossoverPoint; z < Nets[i].Layers[x].Neurons.Length; z ++)
+                    for (int z = crossoverPoint; z < Nets[i].Layers[x].Neurons.Length; z++)
                     {
                         Layer previousLayer = null;
                         if (x > 0)
@@ -312,6 +348,7 @@ namespace FlappyBird
             timeToNextPipe = 4000;
             ClosestPipe = null;
             CurrentGeneration++;
+            ExtraTime = 0;
         }
     }
 }
