@@ -41,6 +41,10 @@ namespace FlappyBird
 
         public int TotalCount;
 
+        public double TempPreviousMil;
+
+        Stopwatch generationStuff = new Stopwatch();
+
         public PlayScreen(GraphicsDevice graphicsDevice, Vector2 screenSize)
             : base()
         {
@@ -54,7 +58,7 @@ namespace FlappyBird
             Vector2 flappySize = new Vector2(40, 40);
             int[] Layers = new int[]
             {
-                2,3,5,5,2,3,1,
+                2,6,1,
             };
             for (int i = 0; i < Flappies.Length; i++)
             {
@@ -74,8 +78,11 @@ namespace FlappyBird
             WasSPressed = false;
             WasXPressed = false;
 
-            SpeedFactor = 1;
+            SpeedFactor = 10;
             TotalCount = 0;
+            TempPreviousMil = 0;
+
+            generationStuff.Start();
         }
 
 
@@ -84,6 +91,7 @@ namespace FlappyBird
 
         public override void Update(GameTime gameTime)
         {
+            Bird AliveBird = null;
             if (InputManager.KeyboardState.IsKeyDown(Microsoft.Xna.Framework.Input.Keys.Space))
             {
                 WasSpacePressed = true;
@@ -163,7 +171,7 @@ namespace FlappyBird
             }
 
             int FlappyCount = 0;
-            double TotalMilliseconds = 0;
+            int DiedCount = 0;
             for (int s = 0; s < SpeedFactor; s++)
             {
                 TotalCount++;
@@ -183,33 +191,31 @@ namespace FlappyBird
                     }
                     WasSPressed = false;
                 }
-                if(InputManager.KeyboardState.IsKeyDown(Microsoft.Xna.Framework.Input.Keys.X))
+                if (InputManager.KeyboardState.IsKeyDown(Microsoft.Xna.Framework.Input.Keys.X))
                 {
                     WasXPressed = true;
                 }
-                else if(WasXPressed)
+                else if (WasXPressed)
                 {
                     SpeedFactor += 50;
                     WasXPressed = false;
                 }
 
-                bool shouldTrain = true;
                 FlappyCount = 0;
-                TotalMilliseconds = 0;
                 for (int i = 0; i < Nets.Length; i++)
                 {
                     if (Flappies[i].IsVisible)
                     {
+                        AliveBird = Flappies[i];
                         FlappyCount++;
-                        TotalMilliseconds = Flappies[i].SurvivalTime;
                         Flappies[i].SurvivalTime += 1;
                         double[] inputs;
                         if (ClosestPipe != null)
                         {
                             inputs = new double[]
                             {
-                        ClosestPipe.Pos.X + ClosestPipe.HitBox.Width - Flappies[i].Pos.X,
-                        Flappies[i].Pos.Y - ClosestPipe.Pos.Y - ClosestPipe.SpaceBetweenPipes.Y * 3 / 4,
+                                ClosestPipe.Pos.X + ClosestPipe.HitBox.Width - Flappies[i].Pos.X,
+                                Flappies[i].Pos.Y - ClosestPipe.Pos.Y - ClosestPipe.SpaceBetweenPipes.Y * 3 / 4,
                             };
 
                         }
@@ -222,17 +228,18 @@ namespace FlappyBird
                             };
                         }
                         Flappies[i].ShouldJump = Nets[i].Compute(inputs)[0];
-                        shouldTrain = false;
                     }
                 }
                 for (int i = Nets.Length; i < Flappies.Length; i++)
                 {
                     Flappies[i].IsVisible = false;
                 }
-                if (shouldTrain)
+                if (AliveBird == null)
                 {
                     Train();
                     RestartGame(gameTime);
+                    DiedCount++;
+                    break;
                 }
 
                 if (TotalCount > timeToNextPipe)
@@ -244,27 +251,27 @@ namespace FlappyBird
                     GameObjects.Add(nextPipe);
                 }
 
+                for (int x = 0; x < Pipes.Count; x++)
+                {
+                    if (ClosestPipe == null)
+                    {
+                        ClosestPipe = Pipes[0];
+                    }
+                    else if (ClosestPipe.Pos.X + ClosestPipe.HitBox.Width < AliveBird.Pos.X)
+                    {
+                        ClosestPipe = Pipes[x + 1];
+                    }
+                }
+
 
                 for (int i = 0; i < Flappies.Length; i++)
                 {
-                    bool shouldInvisible = false;
-                    for (int x = 0; x < Pipes.Count; x++)
+                    if (!Flappies[i].IsVisible) continue;
+                    if (Flappies[i].HitBox.Intersects(ClosestPipe.HitBox) || Flappies[i].HitBox.Intersects(ClosestPipe.OtherPart.HitBox))
                     {
-                        if (Flappies[i].HitBox.Intersects(Pipes[x].HitBox) || Flappies[i].HitBox.Intersects(Pipes[x].OtherPart.HitBox))
-                        {
-                            shouldInvisible = true;
-                        }
-
-                        if (ClosestPipe == null)
-                        {
-                            ClosestPipe = Pipes[0];
-                        }
-                        else if (ClosestPipe.Pos.X + ClosestPipe.HitBox.Width < Flappies[i].Pos.X)
-                        {
-                            ClosestPipe = Pipes[x + 1];
-                        }
+                        Flappies[i].IsVisible = false;
                     }
-                    if (Flappies[i].Pos.Y + Flappies[i].HitBox.Height > ScreenSize.Y || shouldInvisible)
+                    if (Flappies[i].Pos.Y + Flappies[i].HitBox.Height > ScreenSize.Y)
                     {
                         Flappies[i].IsVisible = false;
                     }
@@ -273,7 +280,14 @@ namespace FlappyBird
 
                 base.Update(gameTime);
             }
-            Game1.Title = $"FlappyCount: {FlappyCount}, GameTime: {TotalMilliseconds:0.00}, CurrentGeneration: {CurrentGeneration}";
+            Game1.Title = $"FlappyCount: {FlappyCount}, SpeedFactor: {SpeedFactor}, DiedCount: {DiedCount}, CurrentGeneration: {CurrentGeneration}, TotalTime:{gameTime.TotalGameTime.Seconds}";
+
+            //if(generationStuff.ElapsedMilliseconds >= 10000)
+            //{
+            //    generationStuff.Restart();
+            //    CurrentGeneration = 0;
+            //    SpeedFactor = SpeedFactor > 10 ? 10 : 50;
+            //}
         }
 
         public override void Draw(SpriteBatch spriteBatch)

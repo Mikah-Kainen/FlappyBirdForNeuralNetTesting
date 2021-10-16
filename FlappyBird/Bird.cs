@@ -42,9 +42,9 @@ namespace FlappyBird
             //}
             if(ShouldJump > 0)
             {
-                    if (Pos.Y - 100 > 0)
+                    if (Pos.Y - 50 > 0)
                     {
-                        Pos = new Vector2(Pos.X, Pos.Y - 100);
+                        Pos = new Vector2(Pos.X, Pos.Y - 50);
                     }
                     else
                     {
