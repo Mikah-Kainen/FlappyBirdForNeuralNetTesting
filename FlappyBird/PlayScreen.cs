@@ -15,8 +15,8 @@ namespace FlappyBird
 {
     public class PlayScreen : Screen
     {
-        public const double RandomizeMin = -1;
-        public const double RandomizeMax = 1;
+        public const double RandomizeMin = -.1;
+        public const double RandomizeMax = .1;
 
         public const int CountMin = 250;
         public const int CountMax = 300;
@@ -100,7 +100,6 @@ namespace FlappyBird
             {
                 List<Bird> newFlappies = new List<Bird>();
                 List<NeuralNet> newNets = new List<NeuralNet>();
-                /*(IEnumerable<Bird>, IEnumerable<NeuralNet>)*/
                 var result =
                            Enumerable.Zip<Bird, NeuralNet, (Bird bird, NeuralNet net)>(Flappies, Nets, (b, n) => (b, n))
                            .OrderBy(pair => pair.bird.SurvivalTime)
@@ -133,7 +132,7 @@ namespace FlappyBird
 
 
                 string json = System.IO.File.ReadAllText("NeuralNet.json");
-                //Nets[0] = JsonConvert.DeserializeObject<NeuralNet>(json);
+                Nets[0] = JsonConvert.DeserializeObject<NeuralNet>(json);
                 for (int i = Nets[0].Layers.Length - 1; i > 0; i--)
                 {
                     Nets[0].Layers[i].PreviousLayer = Nets[0].Layers[i - 1];
@@ -155,7 +154,6 @@ namespace FlappyBird
                         ClosestPipe.Pos.X + ClosestPipe.HitBox.Width - Flappies[0].Pos.X,
                         Flappies[0].Pos.Y - ClosestPipe.Pos.Y - ClosestPipe.SpaceBetweenPipes.Y * 3 / 4,
                     };
-
                 }
                 else
                 {
@@ -171,9 +169,14 @@ namespace FlappyBird
             }
 
             int FlappyCount = 0;
-            int DiedCount = 0;
             for (int s = 0; s < SpeedFactor; s++)
             {
+                if(Pipes.Count > 0 && Pipes[0].Pos.X + Pipes[0].HitBox.Width < 0)
+                {
+                    GameObjects.Remove(Pipes[0]);
+                    Pipes.Remove(Pipes[0]);
+                }
+
                 TotalCount++;
                 if (InputManager.KeyboardState.IsKeyDown(Microsoft.Xna.Framework.Input.Keys.S))
                 {
@@ -238,7 +241,6 @@ namespace FlappyBird
                 {
                     Train();
                     RestartGame(gameTime);
-                    DiedCount++;
                     break;
                 }
 
@@ -251,22 +253,19 @@ namespace FlappyBird
                     GameObjects.Add(nextPipe);
                 }
 
-                for (int x = 0; x < Pipes.Count; x++)
+                if (ClosestPipe == null)
                 {
-                    if (ClosestPipe == null)
-                    {
-                        ClosestPipe = Pipes[0];
-                    }
-                    else if (ClosestPipe.Pos.X + ClosestPipe.HitBox.Width < AliveBird.Pos.X)
-                    {
-                        ClosestPipe = Pipes[x + 1];
-                    }
+                    ClosestPipe = Pipes[0];
+                }
+                else if (ClosestPipe.Pos.X + ClosestPipe.HitBox.Width < AliveBird.Pos.X)
+                {
+                    ClosestPipe = Pipes[0];
                 }
 
 
                 for (int i = 0; i < Flappies.Length; i++)
                 {
-                    if (!Flappies[i].IsVisible) continue;
+                    //if (Flappies[i].IsVisible) continue;
                     if (Flappies[i].HitBox.Intersects(ClosestPipe.HitBox) || Flappies[i].HitBox.Intersects(ClosestPipe.OtherPart.HitBox))
                     {
                         Flappies[i].IsVisible = false;
@@ -280,7 +279,7 @@ namespace FlappyBird
 
                 base.Update(gameTime);
             }
-            Game1.Title = $"FlappyCount: {FlappyCount}, SpeedFactor: {SpeedFactor}, DiedCount: {DiedCount}, CurrentGeneration: {CurrentGeneration}, TotalTime:{gameTime.TotalGameTime.Seconds}";
+            Game1.Title = $"FlappyCount: {FlappyCount}, SpeedFactor: {SpeedFactor}, CurrentGeneration: {CurrentGeneration}, TotalTime: {(int)gameTime.TotalGameTime.TotalMinutes}:{(int)gameTime.TotalGameTime.TotalSeconds}";
 
             //if(generationStuff.ElapsedMilliseconds >= 10000)
             //{
@@ -318,27 +317,19 @@ namespace FlappyBird
 
             for (int i = Nets.Length * 1 / 10; i < Nets.Length * 9 / 10; i++)
             {
-                for (int x = 0; x < Nets[i].Layers.Length; x++)
+                for (int x = 1; x < Nets[i].Layers.Length; x++)
                 {
-                    NeuralNet parent = Nets[Random.Next(0, 10)];
+                    NeuralNet parent = Nets[Random.Next(0, 100)];
                     int length = Nets[i].Layers[x].Neurons.Length;
                     int crossoverPoint = Random.Next(0, length);
+
+                    Layer previousLayer = Nets[i].Layers[x - 1];
                     for (int z = 0; z < crossoverPoint; z++)
                     {
-                        Layer previousLayer = null;
-                        if (x > 0)
-                        {
-                            previousLayer = Nets[i].Layers[x - 1];
-                        }
                         Nets[i].Layers[x].Neurons[z] = new Neuron(parent.Layers[x].Neurons[z], Nets[i].Layers[x].Neurons[z].Dentrites, previousLayer);
                     }
                     for (int z = crossoverPoint; z < Nets[i].Layers[x].Neurons.Length; z++)
                     {
-                        Layer previousLayer = null;
-                        if (x > 0)
-                        {
-                            previousLayer = Nets[i].Layers[x - 1];
-                        }
                         Nets[i].Layers[x].Neurons[z] = new Neuron(Nets[i].Layers[x].Neurons[z], Nets[i].Layers[x].Neurons[z].Dentrites, previousLayer);
                     }
 
